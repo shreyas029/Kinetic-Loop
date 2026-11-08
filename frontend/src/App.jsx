@@ -216,9 +216,19 @@ return (
           Total: ₹{cartTotal.toLocaleString('en-IN')}
         </h3>
 
-        <button type="submit" className="checkout-button">
-          Place Order
-        </button>
+        
+<button
+  type="button"
+  className="checkout-button"
+  disabled
+  style={{
+    opacity: 0.6,
+    cursor: 'not-allowed'
+  }}
+>
+  Checkout Coming Soon
+</button>
+      
       </form>
     </div>
   </div>
