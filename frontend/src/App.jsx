@@ -163,7 +163,8 @@ return (
   const formData = new FormData(e.currentTarget)
 
   try {
-    const response = await fetch('http://localhost:5000/api/orders', {
+  
+    const response = await fetch('https://kinetic-loop-backend.onrender.com/api/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -218,15 +219,12 @@ return (
 
         
 <button
-  type="button"
+  
+  type="submit"
   className="checkout-button"
-  disabled
-  style={{
-    opacity: 0.6,
-    cursor: 'not-allowed'
-  }}
 >
-  Checkout Coming Soon
+  Place Order
+
 </button>
       
       </form>
