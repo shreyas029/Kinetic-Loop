@@ -9,11 +9,19 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const { createClient } = require('redis');
 
 app.use(cors());
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
+});
+const redisClient = createClient({
+  url: process.env.REDIS_URL
+});
+
+redisClient.on('error', (error) => {
+  console.error('Redis error:', error.message);
 });
 
 async function initializeDatabase() {
@@ -67,9 +75,37 @@ const products = [
 ];
 
 // API endpoint to get all products
-app.get('/api/products', (req, res) => {
+
+app.get('/api/products', async (req, res) => {
+  const cacheKey = 'kinetic-loop:products';
+
+  if (redisClient.isReady) {
+    try {
+      const cachedProducts = await redisClient.get(cacheKey);
+
+      if (cachedProducts) {
+        return res.json(JSON.parse(cachedProducts));
+      }
+    } catch (error) {
+      console.error('Redis read error:', error.message);
+    }
+  }
+
+  if (redisClient.isReady) {
+    try {
+      await redisClient.setEx(
+        cacheKey,
+        300,
+        JSON.stringify(products)
+      );
+    } catch (error) {
+      console.error('Redis write error:', error.message);
+    }
+  }
+
   res.json(products);
 });
+
 
 
 
@@ -195,6 +231,15 @@ let wss;
 async function startServer() {
   try {
     await initializeDatabase();
+
+    if (process.env.REDIS_URL) {
+  try {
+    await redisClient.connect();
+    console.log('Redis connected successfully');
+  } catch (error) {
+    console.error('Redis connection failed:', error.message);
+  }
+}
 
     const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
