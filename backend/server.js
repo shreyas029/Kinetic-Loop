@@ -77,14 +77,14 @@ app.get('/', (req, res) => {
   res.send('KINETIC LOOP Backend is Running!');
 });
 
-const ordersFile = path.join(__dirname, 'orders.json');
+// First API endpoint
+app.get('/', (req, res) => {
+  res.send('KINETIC LOOP Backend is Running!');
+});
 
-let orders = [];
 
-if (fs.existsSync(ordersFile)) {
-  orders = JSON.parse(fs.readFileSync(ordersFile, 'utf8'));
-}
-app.post('/api/orders', (req, res) => {
+
+app.post('/api/orders', async (req, res) => {
   const { name, email, address, items } = req.body;
 
   if (
@@ -101,6 +101,12 @@ app.post('/api/orders', (req, res) => {
   const orderItems = [];
 
   for (const item of items) {
+    if (!item || typeof item.name !== 'string') {
+      return res.status(400).json({
+        message: 'Invalid product in order.'
+      });
+    }
+
     const product = products.find(
       (p) => p.name === item.name
     );
@@ -124,7 +130,7 @@ app.post('/api/orders', (req, res) => {
   );
 
   const order = {
-    id: `KL-${Date.now()}`,
+    id: `KL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: name.trim(),
     email: email.trim(),
     address: address.trim(),
@@ -133,18 +139,35 @@ app.post('/api/orders', (req, res) => {
     status: 'Test order received'
   };
 
-  orders.push(order);
-  fs.writeFileSync(
-  ordersFile,
-  JSON.stringify(orders, null, 2)
-  );
+  try {
+    await pool.query(
+      `INSERT INTO orders
+       (id, name, email, address, items, total, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        order.id,
+        order.name,
+        order.email,
+        order.address,
+        JSON.stringify(order.items),
+        order.total,
+        order.status
+      ]
+    );
 
+    res.status(201).json({
+      message: 'Order placed successfully!',
+      order
+    });
+  } catch (error) {
+    console.error('Failed to save order:', error.message);
 
-  res.status(201).json({
-    message: 'Order placed successfully!',
-    order
-  });
+    res.status(500).json({
+      message: 'Unable to save order. Please try again.'
+    });
+  }
 });
+
 
 // Start the backend server
 
@@ -162,4 +185,3 @@ async function startServer() {
 }
 
 startServer();
-
