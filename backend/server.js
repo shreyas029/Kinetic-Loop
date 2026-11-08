@@ -1,6 +1,7 @@
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
+const { WebSocketServer, WebSocket } = require('ws');
 
 const fs = require('fs');
 const path = require('path');
@@ -154,7 +155,26 @@ app.post('/api/orders', async (req, res) => {
         order.status
       ]
     );
+// Notify connected clients about a new order
+const notification = JSON.stringify({
+  type: 'NEW_ORDER',
+  orderId: order.id,
+  status: order.status
+});
 
+wss.clients.forEach((client) => {
+  if (client.readyState === WebSocket.OPEN) {
+    client.send(notification);
+  }
+});
+
+if (wss) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(notification);
+    }
+  });
+}
     res.status(201).json({
       message: 'Order placed successfully!',
       order
@@ -171,17 +191,41 @@ app.post('/api/orders', async (req, res) => {
 
 // Start the backend server
 
+let wss;
 async function startServer() {
   try {
     await initializeDatabase();
 
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
+
+    wss = new WebSocketServer({
+      server,
+      path: '/ws'
+    });
+
+    wss.on('connection', (socket) => {
+      console.log('WebSocket client connected');
+
+      socket.send(JSON.stringify({
+        type: 'CONNECTED',
+        message: 'Connected to KINETIC LOOP live updates'
+      }));
+
+      socket.on('close', () => {
+        console.log('WebSocket client disconnected');
+      });
+    });
+
+    console.log('WebSocket server ready at /ws');
   } catch (error) {
     console.error('Server startup failed:', error.message);
     process.exit(1);
   }
 }
+
+startServer();
+
 
 startServer();
