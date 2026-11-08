@@ -1,4 +1,5 @@
 const express = require('express');
+const { Pool } = require('pg');
 const cors = require('cors');
 
 const fs = require('fs');
@@ -9,6 +10,31 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+async function initializeDatabase() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        address TEXT NOT NULL,
+        items JSONB NOT NULL,
+        total NUMERIC(10, 2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'Order received',
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log('PostgreSQL orders table ready');
+  } catch (error) {
+    console.error('Database initialization failed:', error.message);
+  }
+}
 
 // Allow the server to understand JSON
 app.use(express.json());
@@ -121,6 +147,19 @@ app.post('/api/orders', (req, res) => {
 });
 
 // Start the backend server
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+
+async function startServer() {
+  try {
+    await initializeDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Server startup failed:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
+
