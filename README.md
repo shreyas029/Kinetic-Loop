@@ -277,9 +277,9 @@ The following tests have been completed:
 
 Redis cache hits have not been independently verified.
 
-## Important Limitations
+## Limitations
 
-KINETIC LOOP is an academic prototype.
+KINETIC LOOP is a prototype.
 
 - Checkout creates test orders only.
 - No real payment processing is implemented.
@@ -294,6 +294,6 @@ and additional security controls.
 
 ## Project Status
 
-The main assignment technology requirements have been
+The main technology requirements have been
 implemented, and the C++ Crow bonus API has passed
 automated build and endpoint tests.
